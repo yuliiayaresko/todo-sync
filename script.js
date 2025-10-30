@@ -31,7 +31,6 @@ function createTaskElement(task) {
     li.dataset.id = task.id;
     if (task.completed) li.classList.add('completed');
 
-    
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.checked = task.completed;
@@ -39,12 +38,10 @@ function createTaskElement(task) {
         db.ref('tasks/' + task.id).update({ completed: !task.completed })
     );
 
-    
     const span = document.createElement('span');
     span.className = 'task-text';
     span.textContent = task.text;
 
-    
     const actions = document.createElement('div');
     actions.className = 'actions';
 
@@ -54,7 +51,7 @@ function createTaskElement(task) {
     editBtn.addEventListener('click', () => {
         const newText = prompt('Редагувати завдання:', task.text);
         if (newText && newText.trim() !== '') {
-            lastChangedId = task.id; // для підсвітки
+            lastChangedId = task.id;
             db.ref('tasks/' + task.id).update({ text: newText.trim() });
         }
     });
@@ -77,39 +74,6 @@ function createTaskElement(task) {
 }
 
 
-db.ref('tasks').on('child_added', snapshot => {
-    const task = snapshot.val();
-    const existing = document.querySelector(`li[data-id="${task.id}"]`);
-    if (!existing) {
-        const li = createTaskElement(task);
-        li.classList.add('fade-in');
-        taskList.appendChild(li);
-
-        if (task.id === lastChangedId) highlightTask(li);
-        initSortable();
-    }
-});
-
-db.ref('tasks').on('child_changed', snapshot => {
-    const task = snapshot.val();
-    const li = document.querySelector(`li[data-id="${task.id}"]`);
-    if (li) {
-        li.querySelector('.task-text').textContent = task.text;
-        if (task.completed) li.classList.add('completed');
-        else li.classList.remove('completed');
-
-        
-        if (task.id === lastChangedId) highlightTask(li);
-    }
-});
-
-db.ref('tasks').on('child_removed', snapshot => {
-    const taskId = snapshot.key;
-    const li = document.querySelector(`li[data-id="${taskId}"]`);
-    if (li) li.remove();
-});
-
-
 function addTask() {
     const text = taskInput.value.trim();
     if (!text) return;
@@ -121,6 +85,45 @@ function addTask() {
 
 addBtn.addEventListener('click', addTask);
 taskInput.addEventListener('keypress', e => { if (e.key === 'Enter') addTask(); });
+
+
+db.ref('tasks').on('value', snapshot => {
+    const data = snapshot.val() || {};
+    const tasks = Object.values(data).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    const existingIds = Array.from(taskList.children).map(li => li.dataset.id);
+
+    tasks.forEach((task, index) => {
+        let li = document.querySelector(`li[data-id="${task.id}"]`);
+        if (!li) {
+            
+            li = createTaskElement(task);
+            li.classList.add('fade-in');
+            taskList.appendChild(li);
+        }
+
+        
+        li.querySelector('.task-text').textContent = task.text;
+        if (task.completed) li.classList.add('completed');
+        else li.classList.remove('completed');
+
+        
+        if (task.id === lastChangedId) {
+            highlightTask(li);
+            lastChangedId = null;
+        }
+    });
+
+    
+    existingIds.forEach(id => {
+        if (!tasks.find(t => t.id === id)) {
+            const li = document.querySelector(`li[data-id="${id}"]`);
+            if (li) li.remove();
+        }
+    });
+
+    initSortable();
+});
 
 
 function initSortable() {
@@ -139,4 +142,5 @@ function initSortable() {
         }
     });
 }
+
 
