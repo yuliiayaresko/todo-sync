@@ -72,8 +72,6 @@ function createTaskElement(task) {
 
     return li;
 }
-
-
 function addTask() {
     const text = taskInput.value.trim();
     if (!text) return;
@@ -86,11 +84,11 @@ function addTask() {
 addBtn.addEventListener('click', addTask);
 taskInput.addEventListener('keypress', e => { if (e.key === 'Enter') addTask(); });
 
-
 db.ref('tasks').on('value', snapshot => {
     const data = snapshot.val() || {};
     const tasks = Object.values(data).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
+    
     const existingIds = Array.from(taskList.children).map(li => li.dataset.id);
 
     tasks.forEach((task, index) => {
@@ -102,7 +100,7 @@ db.ref('tasks').on('value', snapshot => {
             taskList.appendChild(li);
         }
 
-        
+       
         li.querySelector('.task-text').textContent = task.text;
         if (task.completed) li.classList.add('completed');
         else li.classList.remove('completed');
