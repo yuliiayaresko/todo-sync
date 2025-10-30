@@ -17,6 +17,14 @@ const addBtn = document.getElementById('addBtn');
 const taskList = document.getElementById('taskList');
 
 
+let lastChangedId = null;
+
+
+function highlightTask(taskElement) {
+    taskElement.classList.add('highlight');
+    setTimeout(() => taskElement.classList.remove('highlight'), 1000);
+}
+
 db.ref('tasks').on('value', snapshot => {
     const data = snapshot.val() || {};
     const tasks = Object.values(data).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -28,6 +36,7 @@ function addTask() {
     const text = taskInput.value.trim();
     if (!text) return;
     const newTask = { id: Date.now().toString(), text, completed: false, order: Date.now() };
+    lastChangedId = newTask.id; // запам’ятовуємо для підсвітки
     db.ref('tasks/' + newTask.id).set(newTask);
     taskInput.value = '';
 }
@@ -43,6 +52,7 @@ function renderTasks(tasks) {
         li.dataset.id = task.id;
         if (task.completed) li.classList.add('completed');
 
+        
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.checked = task.completed;
@@ -50,10 +60,12 @@ function renderTasks(tasks) {
             db.ref('tasks/' + task.id).update({ completed: !task.completed })
         );
 
+        
         const span = document.createElement('span');
         span.className = 'task-text';
         span.textContent = task.text;
 
+       
         const actions = document.createElement('div');
         actions.className = 'actions';
 
@@ -62,8 +74,10 @@ function renderTasks(tasks) {
         editBtn.className = 'edit-btn';
         editBtn.addEventListener('click', () => {
             const newText = prompt('Редагувати завдання:', task.text);
-            if (newText && newText.trim() !== '')
+            if (newText && newText.trim() !== '') {
+                lastChangedId = task.id; // запам’ятовуємо для підсвітки
                 db.ref('tasks/' + task.id).update({ text: newText.trim() });
+            }
         });
 
         const delBtn = document.createElement('button');
@@ -79,11 +93,18 @@ function renderTasks(tasks) {
         li.appendChild(checkbox);
         li.appendChild(span);
         li.appendChild(actions);
+
         taskList.appendChild(li);
 
         
         li.classList.add('fade-in');
         setTimeout(() => li.classList.remove('fade-in'), 600);
+
+        
+        if (task.id === lastChangedId) {
+            highlightTask(li);
+            lastChangedId = null; 
+        }
     });
 
     initSortable(); 

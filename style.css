@@ -137,7 +137,7 @@ li.completed .task-text {
 		color: #fff;
 	}
 
-/* === DRAG-N-DROP (анімації, але без зміни кольорів стилю) === */
+
 .sortable-ghost {
 	opacity: 0.5;
 	transform: scale(0.98);
