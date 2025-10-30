@@ -1,4 +1,4 @@
-﻿// === ІНІЦІАЛІЗАЦІЯ FIREBASE === 
+﻿
 const firebaseConfig = {
     apiKey: "AIzaSyCEpe5hA8AvZlMJYfFWBkOKQGtzHJ3NEPA",
     authDomain: "todo-sync-f9b93.firebaseapp.com",
@@ -9,64 +9,40 @@ const firebaseConfig = {
     appId: "1:663786420564:web:f0c23704e5ccce8a5370c1",
     measurementId: "G-4C0HYHHGHP"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// === DOM елементи ===
 const taskInput = document.getElementById('taskInput');
 const addBtn = document.getElementById('addBtn');
 const taskList = document.getElementById('taskList');
 
-// === Додати нове завдання ===
-function addTask() {
-    const text = taskInput.value.trim();
-    if (!text) return;
 
-    db.ref('tasks').once('value', snapshot => {
-        const data = snapshot.val() || {};
-        const maxOrder = Object.values(data).reduce((max, t) => t.order > max ? t.order : max, -1);
-
-        const newTask = { id: Date.now(), text, completed: false, order: maxOrder + 1 };
-        db.ref('tasks/' + newTask.id).set(newTask);
-        taskInput.value = '';
-    });
-}
-
-// === Відслідковуємо зміни у Firebase ===
 db.ref('tasks').on('value', snapshot => {
     const data = snapshot.val() || {};
     const tasks = Object.values(data).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     renderTasks(tasks);
 });
 
-// === Рендер списку завдань з анімаціями ===
+
+function addTask() {
+    const text = taskInput.value.trim();
+    if (!text) return;
+    const newTask = { id: Date.now().toString(), text, completed: false, order: Date.now() };
+    db.ref('tasks/' + newTask.id).set(newTask);
+    taskInput.value = '';
+}
+
+addBtn.addEventListener('click', addTask);
+taskInput.addEventListener('keypress', e => { if (e.key === 'Enter') addTask(); });
+
+
 function renderTasks(tasks) {
-    // Зберігаємо існуючі елементи для визначення змін
-    const oldItems = {};
-    Array.from(taskList.children).forEach(li => oldItems[li.dataset.id] = li);
-
     taskList.innerHTML = '';
-
     tasks.forEach(task => {
-        let li = oldItems[task.id];
-        const isNew = !li;
+        const li = document.createElement('li');
+        li.dataset.id = task.id;
+        if (task.completed) li.classList.add('completed');
 
-        if (!li) {
-            li = document.createElement('li');
-            li.dataset.id = task.id;
-        }
-
-        li.classList.toggle('completed', task.completed);
-
-        // Підсвітка змін
-        if (isNew) {
-            li.classList.add('highlight');
-            setTimeout(() => li.classList.remove('highlight'), 800);
-        }
-
-        // Оновлюємо вміст
-        li.innerHTML = '';
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.checked = task.completed;
@@ -103,13 +79,25 @@ function renderTasks(tasks) {
         li.appendChild(checkbox);
         li.appendChild(span);
         li.appendChild(actions);
-
         taskList.appendChild(li);
+
+        
+        li.classList.add('fade-in');
+        setTimeout(() => li.classList.remove('fade-in'), 600);
     });
 
-    // === Drag-n-Drop з анімацією ===
-    Sortable.create(taskList, {
+    initSortable(); 
+}
+
+
+function initSortable() {
+    if (window.sortable) window.sortable.destroy();
+    window.sortable = Sortable.create(taskList, {
         animation: 200,
+        ghostClass: "sortable-ghost",
+        dragClass: "sortable-drag",
+        fallbackOnBody: true,
+        swapThreshold: 0.65,
         onEnd: function () {
             const newOrder = Array.from(taskList.children).map(li => li.dataset.id);
             newOrder.forEach((id, index) => {
@@ -119,10 +107,4 @@ function renderTasks(tasks) {
     });
 }
 
-// === Слухаємо події кнопки та Enter ===
-addBtn.addEventListener('click', addTask);
-taskInput.addEventListener('keypress', e => {
-    if (e.key === 'Enter') addTask();
-});
 
-console.log("Firebase:", firebase.apps.length ? "Підключено ✅" : "Немає підключення ❌");

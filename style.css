@@ -1,29 +1,65 @@
-/* Основний стиль */
 body {
-	font-family: "Inter", Arial, sans-serif;
-	background: linear-gradient(135deg, #9be7ff, #c3f0ca);
+	font-family: "Segoe UI", sans-serif;
+	background: linear-gradient(120deg, #89f7fe, #66a6ff);
+	min-height: 100vh;
 	display: flex;
-	justify-content: center;
+	flex-direction: column;
 	align-items: center;
-	height: 100vh;
-	margin: 0;
+	padding: 20px;
 }
 
-/* Контейнер */
-.todo-container {
-	background: #ffffffcc;
-	backdrop-filter: blur(10px);
-	padding: 25px 30px;
-	border-radius: 20px;
-	box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-	width: 350px;
-	animation: fadeIn 0.5s ease;
+#taskList {
+	list-style: none;
+	padding: 0;
+	width: 90%;
+	max-width: 400px;
+}
+
+	#taskList li {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		background: white;
+		margin-bottom: 10px;
+		padding: 12px 14px;
+		border-radius: 8px;
+		box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+		cursor: grab;
+		user-select: none;
+		touch-action: pan-y;
+		transition: transform 0.2s, background 0.3s;
+	}
+
+		#taskList li.completed .task-text {
+			text-decoration: line-through;
+			color: gray;
+		}
+
+.actions button {
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 18px;
+}
+
+.sortable-ghost {
+	opacity: 0.4;
+	background-color: #d0f0ff;
+}
+
+.sortable-drag {
+	background-color: #b3e5fc;
+	transform: scale(1.05);
+}
+
+.fade-in {
+	animation: fadeIn 0.6s ease;
 }
 
 @keyframes fadeIn {
 	from {
 		opacity: 0;
-		transform: translateY(10px);
+		transform: translateY(-10px);
 	}
 
 	to {
@@ -32,101 +68,13 @@ body {
 	}
 }
 
-/* Заголовок */
-h2 {
-	text-align: center;
-	color: #333;
-	margin-bottom: 20px;
-}
-
-/* Поле вводу */
-.input-group {
-	display: flex;
-	gap: 8px;
-	margin-bottom: 15px;
-}
-
-input[type="text"] {
-	flex: 1;
-	padding: 10px;
-	border: 2px solid #8bc34a;
-	border-radius: 10px;
-	outline: none;
-	font-size: 14px;
-}
-
-	input[type="text"]:focus {
-		border-color: #558b2f;
+@media (max-width: 600px) {
+	#taskList li {
+		font-size: 16px;
+		padding: 14px 12px;
 	}
-
-button {
-	background-color: #8bc34a;
-	color: white;
-	border: none;
-	padding: 0 12px;
-	border-radius: 10px;
-	cursor: pointer;
-	transition: background 0.2s;
-	font-size: 18px;
-}
-
-	button:hover {
-		background-color: #689f38;
-	}
-
-/* Список */
-ul {
-	list-style: none;
-	padding: 0;
-	margin: 0;
-}
-
-li {
-	background: #f0f9f2;
-	margin-bottom: 8px;
-	padding: 10px 12px;
-	border-radius: 10px;
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	transition: all 0.3s ease;
-}
-#taskList li {
-	transition: transform 0.2s, background-color 0.8s;
-}
-
-	#taskList li.highlight {
-		background-color: #ffff99;
-	}
-
-	li.completed .task-text {
-		text-decoration: line-through;
-		color: #777;
-	}
-
-.actions {
-	display: flex;
-	gap: 6px;
-}
 
 	.actions button {
-		font-size: 14px;
-		padding: 4px 6px;
-		border-radius: 6px;
+		font-size: 20px;
 	}
-
-.edit-btn {
-	background: #c3f0ca;
 }
-
-	.edit-btn:hover {
-		background: #1e88e5;
-	}
-
-.delete-btn {
-	background: #c3f0ca;
-}
-
-	.delete-btn:hover {
-		background: #c62828;
-	}
