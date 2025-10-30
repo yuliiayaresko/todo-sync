@@ -1,5 +1,4 @@
-﻿
-const firebaseConfig = {
+﻿const firebaseConfig = {
     apiKey: "AIzaSyCEpe5hA8AvZlMJYfFWBkOKQGtzHJ3NEPA",
     authDomain: "todo-sync-f9b93.firebaseapp.com",
     databaseURL: "https://todo-sync-f9b93-default-rtdb.firebaseio.com",
@@ -15,16 +14,12 @@ const db = firebase.database();
 const taskInput = document.getElementById('taskInput');
 const addBtn = document.getElementById('addBtn');
 const taskList = document.getElementById('taskList');
-
-
 let lastChangedId = null;
-
 
 function highlightTask(taskElement) {
     taskElement.classList.add('highlight');
     setTimeout(() => taskElement.classList.remove('highlight'), 1000);
 }
-
 
 function createTaskElement(task) {
     const li = document.createElement('li');
@@ -65,64 +60,82 @@ function createTaskElement(task) {
 
     actions.appendChild(editBtn);
     actions.appendChild(delBtn);
-
     li.appendChild(checkbox);
     li.appendChild(span);
     li.appendChild(actions);
-
     return li;
 }
+
 function addTask() {
     const text = taskInput.value.trim();
     if (!text) return;
-    const newTask = { id: Date.now().toString(), text, completed: false, order: Date.now() };
+    const newTask = {
+        id: Date.now().toString(),
+        text,
+        completed: false,
+        order: Date.now()
+    };
     lastChangedId = newTask.id;
     db.ref('tasks/' + newTask.id).set(newTask);
     taskInput.value = '';
 }
 
 addBtn.addEventListener('click', addTask);
-taskInput.addEventListener('keypress', e => { if (e.key === 'Enter') addTask(); });
+taskInput.addEventListener('keypress', e => {
+    if (e.key === 'Enter') addTask();
+});
 
 db.ref('tasks').on('value', snapshot => {
     const data = snapshot.val() || {};
     const tasks = Object.values(data).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-    
-    const existingIds = Array.from(taskList.children).map(li => li.dataset.id);
-
-    tasks.forEach((task, index) => {
+    tasks.forEach(task => {
         let li = document.querySelector(`li[data-id="${task.id}"]`);
         if (!li) {
-            
             li = createTaskElement(task);
-            li.classList.add('fade-in');
+            li.style.transition = 'transform 0.3s ease, background-color 0.5s';
             taskList.appendChild(li);
         }
-
-       
         li.querySelector('.task-text').textContent = task.text;
-        if (task.completed) li.classList.add('completed');
-        else li.classList.remove('completed');
+        li.querySelector('input[type="checkbox"]').checked = task.completed;
+        li.classList.toggle('completed', task.completed);
 
-        
         if (task.id === lastChangedId) {
             highlightTask(li);
             lastChangedId = null;
         }
     });
 
-    
-    existingIds.forEach(id => {
-        if (!tasks.find(t => t.id === id)) {
-            const li = document.querySelector(`li[data-id="${id}"]`);
-            if (li) li.remove();
-        }
+    Array.from(taskList.children).forEach(li => {
+        if (!tasks.find(t => t.id === li.dataset.id)) li.remove();
     });
+
+    const currentOrder = Array.from(taskList.children).map(li => li.dataset.id);
+    const correctOrder = tasks.map(t => t.id);
+    if (JSON.stringify(currentOrder) !== JSON.stringify(correctOrder)) {
+        const positions = {};
+        Array.from(taskList.children).forEach(li => positions[li.dataset.id] = li.getBoundingClientRect().top);
+
+        tasks.forEach(task => {
+            const li = document.querySelector(`li[data-id="${task.id}"]`);
+            if (li) taskList.appendChild(li);
+        });
+
+        requestAnimationFrame(() => {
+            Array.from(taskList.children).forEach(li => {
+                const oldTop = positions[li.dataset.id];
+                const newTop = li.getBoundingClientRect().top;
+                const delta = oldTop - newTop;
+                li.style.transform = `translateY(${delta}px)`;
+                requestAnimationFrame(() => {
+                    li.style.transform = '';
+                });
+            });
+        });
+    }
 
     initSortable();
 });
-
 
 function initSortable() {
     if (window.sortable) window.sortable.destroy();
@@ -133,12 +146,13 @@ function initSortable() {
         fallbackOnBody: true,
         swapThreshold: 0.65,
         onEnd: function () {
-            const newOrder = Array.from(taskList.children).map(li => li.dataset.id);
-            newOrder.forEach((id, index) => {
-                db.ref('tasks/' + id).update({ order: index });
+            const newOrder = Array.from(taskList.children).map((li, i) => ({
+                id: li.dataset.id,
+                order: i
+            }));
+            newOrder.forEach(({ id, order }) => {
+                db.ref('tasks/' + id).update({ order });
             });
         }
     });
 }
-
-
