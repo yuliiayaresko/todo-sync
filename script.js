@@ -25,10 +25,88 @@ function highlightTask(taskElement) {
     setTimeout(() => taskElement.classList.remove('highlight'), 1000);
 }
 
-db.ref('tasks').on('value', snapshot => {
-    const data = snapshot.val() || {};
-    const tasks = Object.values(data).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-    renderTasks(tasks);
+
+function createTaskElement(task) {
+    const li = document.createElement('li');
+    li.dataset.id = task.id;
+    if (task.completed) li.classList.add('completed');
+
+    
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = task.completed;
+    checkbox.addEventListener('change', () =>
+        db.ref('tasks/' + task.id).update({ completed: !task.completed })
+    );
+
+    
+    const span = document.createElement('span');
+    span.className = 'task-text';
+    span.textContent = task.text;
+
+    
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.textContent = '✏️';
+    editBtn.className = 'edit-btn';
+    editBtn.addEventListener('click', () => {
+        const newText = prompt('Редагувати завдання:', task.text);
+        if (newText && newText.trim() !== '') {
+            lastChangedId = task.id; // для підсвітки
+            db.ref('tasks/' + task.id).update({ text: newText.trim() });
+        }
+    });
+
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '🗑️';
+    delBtn.className = 'delete-btn';
+    delBtn.addEventListener('click', () =>
+        db.ref('tasks/' + task.id).remove()
+    );
+
+    actions.appendChild(editBtn);
+    actions.appendChild(delBtn);
+
+    li.appendChild(checkbox);
+    li.appendChild(span);
+    li.appendChild(actions);
+
+    return li;
+}
+
+
+db.ref('tasks').on('child_added', snapshot => {
+    const task = snapshot.val();
+    const existing = document.querySelector(`li[data-id="${task.id}"]`);
+    if (!existing) {
+        const li = createTaskElement(task);
+        li.classList.add('fade-in');
+        taskList.appendChild(li);
+
+        if (task.id === lastChangedId) highlightTask(li);
+        initSortable();
+    }
+});
+
+db.ref('tasks').on('child_changed', snapshot => {
+    const task = snapshot.val();
+    const li = document.querySelector(`li[data-id="${task.id}"]`);
+    if (li) {
+        li.querySelector('.task-text').textContent = task.text;
+        if (task.completed) li.classList.add('completed');
+        else li.classList.remove('completed');
+
+        
+        if (task.id === lastChangedId) highlightTask(li);
+    }
+});
+
+db.ref('tasks').on('child_removed', snapshot => {
+    const taskId = snapshot.key;
+    const li = document.querySelector(`li[data-id="${taskId}"]`);
+    if (li) li.remove();
 });
 
 
@@ -36,79 +114,13 @@ function addTask() {
     const text = taskInput.value.trim();
     if (!text) return;
     const newTask = { id: Date.now().toString(), text, completed: false, order: Date.now() };
-    lastChangedId = newTask.id; // запам’ятовуємо для підсвітки
+    lastChangedId = newTask.id;
     db.ref('tasks/' + newTask.id).set(newTask);
     taskInput.value = '';
 }
 
 addBtn.addEventListener('click', addTask);
 taskInput.addEventListener('keypress', e => { if (e.key === 'Enter') addTask(); });
-
-
-function renderTasks(tasks) {
-    taskList.innerHTML = '';
-    tasks.forEach(task => {
-        const li = document.createElement('li');
-        li.dataset.id = task.id;
-        if (task.completed) li.classList.add('completed');
-
-        
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.checked = task.completed;
-        checkbox.addEventListener('change', () =>
-            db.ref('tasks/' + task.id).update({ completed: !task.completed })
-        );
-
-        
-        const span = document.createElement('span');
-        span.className = 'task-text';
-        span.textContent = task.text;
-
-       
-        const actions = document.createElement('div');
-        actions.className = 'actions';
-
-        const editBtn = document.createElement('button');
-        editBtn.textContent = '✏️';
-        editBtn.className = 'edit-btn';
-        editBtn.addEventListener('click', () => {
-            const newText = prompt('Редагувати завдання:', task.text);
-            if (newText && newText.trim() !== '') {
-                lastChangedId = task.id; // запам’ятовуємо для підсвітки
-                db.ref('tasks/' + task.id).update({ text: newText.trim() });
-            }
-        });
-
-        const delBtn = document.createElement('button');
-        delBtn.textContent = '🗑️';
-        delBtn.className = 'delete-btn';
-        delBtn.addEventListener('click', () =>
-            db.ref('tasks/' + task.id).remove()
-        );
-
-        actions.appendChild(editBtn);
-        actions.appendChild(delBtn);
-
-        li.appendChild(checkbox);
-        li.appendChild(span);
-        li.appendChild(actions);
-
-        taskList.appendChild(li);
-
-        
-        li.classList.add('fade-in');
-        setTimeout(() => li.classList.remove('fade-in'), 600);
-
-        
-        if (task.id === lastChangedId) {
-            highlightTask(li);
-            lastChangedId = null; 
-        }
-    });
-
-    initSortable(); 
-}
 
 
 function initSortable() {
@@ -127,5 +139,4 @@ function initSortable() {
         }
     });
 }
-
 
